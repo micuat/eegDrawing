@@ -3,6 +3,8 @@
 #include "ofMain.h"
 #include "ofxGui.h"
 #include "ofxOsc.h"
+#include "ofxJSON.h"
+#include "ofxCv.h"
 
 const int width = 640;
 const int height = 640;
@@ -59,4 +61,18 @@ public:
     ofFbo fbo;
     
     ofxOscReceiver receiver;
+    
+    ofVideoPlayer videoPlayer;
+    int curFrame;
+    
+    ofxJSONElement responsex, responsey, responsez;
+    vector<ofPoint> points;
+    
+    bool showVideo;
+    bool showPoints;
+    
+    ofxCv::KalmanPosition kalman;
+
+    ofApp() : showVideo(true), showPoints(true), curFrame(0) {
+    }
 };

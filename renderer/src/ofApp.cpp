@@ -6,8 +6,38 @@
 void ofApp::setup(){
     ofHideCursor();
     
+    ofSetBackgroundAuto(false);
+    
     receiver.setup(13000);
 
+    videoPlayer.loadMovie(ofToDataPath("D05T01_Janine_sync_Center_Small.mp4"));
+    videoPlayer.setLoopState(OF_LOOP_NORMAL);
+    videoPlayer.play();
+ 
+    // D01T01
+    //std::string urlx = "http://api.piecemeta.com/streams/d1c05738-4b96-4548-837f-90dd9b37af08.json";
+    //std::string urly = "http://api.piecemeta.com/streams/f166001a-42db-48f0-8514-a6fd636eed6c.json";
+    //std::string urlz = "http://api.piecemeta.com/streams/5c77f56b-8fe3-4344-85e3-52fe16f78272.json";
+    // D05T01
+    std::string urlx = ofToDataPath("3eae1051-e185-4458-b04e-7bd510f6f076.json");
+    std::string urly = ofToDataPath("9cc12a02-f7c9-4fd3-a3aa-1cabd1a83ef9.json");
+    
+    if (!responsex.open(urlx))
+    {
+        ofLogNotice("ofApp::setup") << "Failed to parse JSON";
+    }
+    if (!responsey.open(urly))
+    {
+        ofLogNotice("ofApp::setup") << "Failed to parse JSON";
+    }
+    for (Json::ArrayIndex i = 0; i < responsex["frames"].size(); i++)
+    {
+        ofPoint p;
+        p.x = ofMap(responsex["frames"][i].asFloat(), 0, 15, 0, 1);
+        p.y = ofMap(responsey["frames"][i].asFloat(), 0, 15, 0, 1);
+        points.push_back(p);
+    }
+    
     sampleIndex = 0;
     ofxNumpy::load("/Users/naoto/Documents/bci_art/tsneResult.npy", y);
     
@@ -83,10 +113,14 @@ void ofApp::setup(){
     drawGui = false;
     
     fbo.allocate(width * 2, height * 2, GL_RGB);
+    
+    kalman.init(1e-4, 1e+1);
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    kalman.update(sample);
+    
 	// check for waiting messages
 	while(receiver.hasWaitingMessages()){
 		// get the next message
@@ -105,6 +139,10 @@ void ofApp::update(){
             ofVec2f p0 = sample;
             p0.x = ofMap(p0.x, minXY.x, maxXY.x, -width * 0.5f + 10, width * 0.5f - 10);
             p0.y = ofMap(p0.y, minXY.y, maxXY.y, -height * 0.5f + 10, height * 0.5f - 10);
+            
+            ofVec2f pn = kalman.getPrediction();
+            pn.x = ofMap(pn.x, minXY.x, maxXY.x, 0, 1);
+            pn.y = ofMap(pn.y, minXY.y, maxXY.y, 1, 0);
             for (int i = 0; i < yNew.size(); i++)
             {
                 ofVec2f p1 = yNew.at(i);
@@ -121,14 +159,43 @@ void ofApp::update(){
                     stringsNew.addIndex(stringsNew.getNumVertices() - 1);
                 }
             }
+            
+            if(showVideo) {
+                // find video frame
+                float closestDistance = 10000;
+                int closestFrame = 0;
+                for (int i = 0; i < points.size(); i++) {
+                    float distanceSquared = points.at(i).distanceSquared(pn);
+                    if(distanceSquared < closestDistance) {
+                        closestDistance = distanceSquared;
+                        closestFrame = i;
+                    }
+                }
+                curFrame = closestFrame / 2;
+            }
         }
     }
+    videoPlayer.setFrame(curFrame);
+    
+    videoPlayer.update();
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-    ofBackground(0, 255);
+    if(showPoints) {
+        ofBackground(0, 255);
+        ofSetColor(255, 255);
+    }
+    else {
+        ofSetColor(255, 25);
+    }
+
+    if(showVideo) {
+        videoPlayer.draw(0, 0, ofGetWidth(), ofGetHeight());
+    }
     
+    if(!showPoints) return;
+
     int count = 0;
     ofVec2f pPrev;
     
@@ -215,6 +282,14 @@ void ofApp::keyPressed(int key){
     if (key == 'f')
     {
         ofToggleFullscreen();
+    }
+    if (key == '1')
+    {
+        showVideo = !showVideo;
+    }
+    if (key == '2')
+    {
+        showPoints = !showPoints;
     }
 }
 
