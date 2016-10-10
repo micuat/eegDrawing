@@ -31,11 +31,7 @@ public:
     vector<ofVec2f> y;
     vector<ofVec2f> yNew;
     vector<vector<float> > feat_matrix;
-    vector<float> alphas;
-    ofImage softPoint;
-    
-    ofVec2f minXY, maxXY;
-    
+
     ofxPanel gui;
     ofxIntSlider sliderChannel;
     ofxFloatSlider sliderUpperLimit;

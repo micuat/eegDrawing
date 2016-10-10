@@ -14,10 +14,6 @@ void ofApp::setup(){
     videoPlayer.setLoopState(OF_LOOP_NORMAL);
     videoPlayer.play();
  
-    // D01T01
-    //std::string urlx = "http://api.piecemeta.com/streams/d1c05738-4b96-4548-837f-90dd9b37af08.json";
-    //std::string urly = "http://api.piecemeta.com/streams/f166001a-42db-48f0-8514-a6fd636eed6c.json";
-    //std::string urlz = "http://api.piecemeta.com/streams/5c77f56b-8fe3-4344-85e3-52fe16f78272.json";
     // D05T01
     std::string urlx = ofToDataPath("3eae1051-e185-4458-b04e-7bd510f6f076.json");
     std::string urly = ofToDataPath("9cc12a02-f7c9-4fd3-a3aa-1cabd1a83ef9.json");
@@ -59,18 +55,6 @@ void ofApp::setup(){
         feat_matrix.push_back(feat_vector);
     }
 
-    minXY.x = maxXY.x = y.at(0).x;
-    minXY.y = maxXY.y = y.at(0).y;
-    for (int i = 0; i < y.size(); i++)
-    {
-        ofVec2f p = y.at(i);
-        minXY.x = min(minXY.x, p.x);
-        maxXY.x = max(maxXY.x, p.x);
-        minXY.y = min(minXY.y, p.y);
-        maxXY.y = max(maxXY.y, p.y);
-    }
-    ofLogError() << minXY << " " << maxXY;
-    
     strings.setMode(OF_PRIMITIVE_LINES);
     stringsNew.setMode(OF_PRIMITIVE_LINES);
     for (int i = 0; i < y.size(); i++)
@@ -79,10 +63,10 @@ void ofApp::setup(){
         {
             ofVec2f p0 = y.at(i);
             ofVec2f p1 = y.at(j);
-            p0.x = ofMap(p0.x, minXY.x, maxXY.x, -width * 0.5f + 10, width * 0.5f - 10);
-            p0.y = ofMap(p0.y, minXY.y, maxXY.y, -height * 0.5f + 10, height * 0.5f - 10);
-            p1.x = ofMap(p1.x, minXY.x, maxXY.x, -width * 0.5f + 10, width * 0.5f - 10);
-            p1.y = ofMap(p1.y, minXY.y, maxXY.y, -height * 0.5f + 10, height * 0.5f - 10);
+            p0.x = ofMap(p0.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
+            p0.y = ofMap(p0.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
+            p1.x = ofMap(p1.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
+            p1.y = ofMap(p1.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
             float dist = p0.distance(p1);
             float distThreshold = 100;
             if (dist < distThreshold)
@@ -137,17 +121,16 @@ void ofApp::update(){
             yNew.push_back(sample);
             
             ofVec2f p0 = sample;
-            p0.x = ofMap(p0.x, minXY.x, maxXY.x, -width * 0.5f + 10, width * 0.5f - 10);
-            p0.y = ofMap(p0.y, minXY.y, maxXY.y, -height * 0.5f + 10, height * 0.5f - 10);
+            p0.x = ofMap(p0.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
+            p0.y = ofMap(p0.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
             
             ofVec2f pn = kalman.getPrediction();
-            pn.x = ofMap(pn.x, minXY.x, maxXY.x, 0, 1);
-            pn.y = ofMap(pn.y, minXY.y, maxXY.y, 1, 0);
+            pn.y = 1 - pn.y;
             for (int i = 0; i < yNew.size(); i++)
             {
                 ofVec2f p1 = yNew.at(i);
-                p1.x = ofMap(p1.x, minXY.x, maxXY.x, -width * 0.5f + 10, width * 0.5f - 10);
-                p1.y = ofMap(p1.y, minXY.y, maxXY.y, -height * 0.5f + 10, height * 0.5f - 10);
+                p1.x = ofMap(p1.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
+                p1.y = ofMap(p1.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
                 float dist = p0.distance(p1);
                 if (dist < distThreshold)
                 {
@@ -230,8 +213,8 @@ void ofApp::draw(){
             ofSetColor(ofFloatColor::fromHsb((float)count / y.size() * 0.75f, 1, 1, 0.95f));
         
         ofVec2f newPos;
-        newPos.x = ofMap(p.x, minXY.x, maxXY.x, -width * 0.5f + 10, width * 0.5f - 10);
-        newPos.y = ofMap(p.y, minXY.y, maxXY.y, -height * 0.5f + 10, height * 0.5f - 10);
+        newPos.x = ofMap(p.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
+        newPos.y = ofMap(p.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
         
         ofCircle(newPos, radius);
         
@@ -242,36 +225,7 @@ void ofApp::draw(){
     if (yNew.size() >= refreshSec * 10)
     {
         ofSaveScreen(ofGetTimestampString() + ".png");
-//        fbo.begin();
-//        ofEnableAlphaBlending();
-//        ofEnableAntiAliasing();
-//        
-//        ofTranslate(width * 0.5f * 2, height * 0.5f * 2);
-//        ofScale(2, 2);
-//        
-//        count = 0;
-//        for (auto& p : y)
-//        {
-//            ofSetColor(ofFloatColor::fromHsb((float)count / y.size() * 0.75f, 1, 1, 0.5f));
-//            
-//            ofVec2f newPos;
-//            newPos.x = ofMap(p.x, minXY.x, maxXY.x, -width * 0.5f + 10, width * 0.5f - 10);
-//            newPos.y = ofMap(p.y, minXY.y, maxXY.y, -height * 0.5f + 10, height * 0.5f - 10);
-//            float radius = 5;
-//            ofDrawCircle(newPos, radius);
-//            count++;
-//        }
-//        
-//        ofSetColor(255, 255);
-//        stringsNew.draw();
-//        fbo.end();
-//        
-//        ofImage image;
-//        image.allocate(width * 2, height * 2, OF_IMAGE_COLOR);
-//        fbo.readToPixels(image.getPixels());
-//        image.resize(width, height);
-//        image.update();
-//        image.save(ofGetTimestampString() + ".png");
+
         yNew.clear();
         stringsNew.clear();
         stringsNew.setMode(OF_PRIMITIVE_LINES);
