@@ -17,17 +17,9 @@ void ofApp::setup(){
     stringsNew.setMode(OF_PRIMITIVE_LINES);
     
     gui.setup();
-    gui.add(sliderChannel.setup("Channel", 0, 0, 15));
-    gui.add(sliderUpperLimit.setup("Upper Limit", 2, 0, 6));
-    gui.add(toggleColor.setup("Color", false));
-    gui.add(refreshSec.setup("Refresh Sec", 5, 1, 20));
-    gui.add(mouseDebug.setup("Mouse Debug", false));
-    gui.add(distThreshold.setup("Distance", 150, 50, 300));
     gui.add(lineAlpha.setup("Line Alpha", 0.5f, 0, 1));
-    gui.add(forceDuration.setup("Force Duration", 1000, 0, 5000));
-    gui.add(forceIntensity.setup("Force Intensity", 30, 0, 100));
-    gui.add(velocity.setup("Velocity", 0, 0, 1));
-    gui.add(bFeedback.setup("Force Feedback", false));
+    gui.add(refreshSec.setup("Refresh Sec", 5, 1, 20));
+    gui.add(distThreshold.setup("Distance", 150, 50, 300));
     gui.loadFromFile("settings.xml");
     drawGui = false;
     
@@ -96,7 +88,6 @@ void ofApp::update(){
         
 		// check for mouse moved message
 		if(m.getAddress() == "/muse/tsne"){
-            samplePrev = sample;
             sample.x = m.getArgAsFloat(0);
             sample.y = m.getArgAsFloat(1);
             sampleIndex = m.getArgAsInt32(2);
@@ -191,10 +182,7 @@ void ofApp::draw(){
         ofVec2f p = y.at(i);
         
         float radius = 5;
-        if(toggleColor)
-            ofSetColor(ofFloatColor::fromHsb(0, 1, 1, ofMap(feat_matrix.at(count).at(sliderChannel), 0, sliderUpperLimit, 0, 0.2f, true)));
-        else
-            ofSetColor(ofFloatColor::fromHsb((float)count / y.size() * 0.75f, 1, 1, 0.95f));
+        ofSetColor(ofFloatColor::fromHsb((float)count / y.size() * 0.75f, 1, 1, 0.95f));
         
         ofVec2f newPos;
         newPos.x = ofMap(p.x, 0, 1, -width * 0.5f, width * 0.5f);

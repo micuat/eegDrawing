@@ -35,21 +35,11 @@ public:
     vector<vector<float> > feat_matrix;
 
     ofxPanel gui;
-    ofxIntSlider sliderChannel;
-    ofxFloatSlider sliderUpperLimit;
-    ofxToggle toggleColor;
-    ofxIntSlider sliderFrame;
+    ofxFloatSlider lineAlpha;
     ofxIntSlider refreshSec;
     ofxIntSlider distThreshold;
-    ofxFloatSlider lineAlpha;
-    ofxToggle mouseDebug;
-    ofxIntSlider forceDuration;
-    ofxFloatSlider forceIntensity, velocity;
-    ofxToggle bFeedback;
     
     ofVec2f sample;
-    ofVec2f samplePrev;
-    ofVec2f newPosPrev;
     int sampleIndex;
     
     ofVboMesh stringsNew;
