@@ -13,6 +13,8 @@ class ofApp : public ofBaseApp{
     
 public:
     void setup();
+    void setupVideo();
+    void loadFeatMatrix();
     void update();
     void draw();
     
@@ -70,6 +72,6 @@ public:
     
     ofxCv::KalmanPosition kalman;
 
-    ofApp() : showVideo(true), showPoints(true), switchFlag(-1), curFrame(0) {
+    ofApp() : showVideo(true), showPoints(true), switchFlag(-1), curFrame(0), sampleIndex(0) {
     }
 };

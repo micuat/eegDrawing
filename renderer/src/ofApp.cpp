@@ -5,55 +5,14 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     ofHideCursor();
-    
     ofSetBackgroundAuto(false);
     
     receiver.setup(13000);
 
-    videoPlayer.loadMovie(ofToDataPath("D05T01_Janine_sync_Center_Small.mp4"));
-    videoPlayer.setLoopState(OF_LOOP_NORMAL);
-    videoPlayer.play();
- 
-    // D05T01
-    std::string urlx = ofToDataPath("3eae1051-e185-4458-b04e-7bd510f6f076.json");
-    std::string urly = ofToDataPath("9cc12a02-f7c9-4fd3-a3aa-1cabd1a83ef9.json");
+    setupVideo();
     
-    if (!responsex.open(urlx))
-    {
-        ofLogNotice("ofApp::setup") << "Failed to parse JSON";
-    }
-    if (!responsey.open(urly))
-    {
-        ofLogNotice("ofApp::setup") << "Failed to parse JSON";
-    }
-    for (Json::ArrayIndex i = 0; i < responsex["frames"].size(); i++)
-    {
-        ofPoint p;
-        p.x = ofMap(responsex["frames"][i].asFloat(), 0, 15, 0, 1);
-        p.y = ofMap(responsey["frames"][i].asFloat(), 0, 15, 0, 1);
-        points.push_back(p);
-    }
-    
-    sampleIndex = 0;
+    loadFeatMatrix();
     ofxNumpy::load("/Users/naoto/Documents/bci_art/tsneResult.npy", y);
-    
-    cnpy::NpyArray t;
-    size_t dim, n;
-    double* data;
-    string filename = "/Users/naoto/Documents/bci_art/t0.npy";
-    t = cnpy::npy_load(filename);
-    ofxNumpy::getSize(t, dim, n);
-    data = t.data<double>();
-    for (int i = 0; i < n / dim; i++)
-    {
-        vector<float> feat_vector(dim);
-        for (int j = 0; j < dim; j++)
-        {
-            feat_vector.at(j) = *data;
-            data++;
-        }
-        feat_matrix.push_back(feat_vector);
-    }
 
     strings.setMode(OF_PRIMITIVE_LINES);
     stringsNew.setMode(OF_PRIMITIVE_LINES);
@@ -99,6 +58,54 @@ void ofApp::setup(){
     fbo.allocate(width * 2, height * 2, GL_RGB);
     
     kalman.init(1e-4, 1e+3);
+}
+
+//--------------------------------------------------------------
+void ofApp::setupVideo(){
+    videoPlayer.loadMovie(ofToDataPath("D05T01_Janine_sync_Center_Small.mp4"));
+    videoPlayer.setLoopState(OF_LOOP_NORMAL);
+    videoPlayer.play();
+    
+    // D05T01
+    std::string urlx = ofToDataPath("3eae1051-e185-4458-b04e-7bd510f6f076.json");
+    std::string urly = ofToDataPath("9cc12a02-f7c9-4fd3-a3aa-1cabd1a83ef9.json");
+    
+    if (!responsex.open(urlx))
+    {
+        ofLogNotice("ofApp::setup") << "Failed to parse JSON";
+    }
+    if (!responsey.open(urly))
+    {
+        ofLogNotice("ofApp::setup") << "Failed to parse JSON";
+    }
+    for (Json::ArrayIndex i = 0; i < responsex["frames"].size(); i++)
+    {
+        ofPoint p;
+        p.x = ofMap(responsex["frames"][i].asFloat(), 0, 15, 0, 1);
+        p.y = ofMap(responsey["frames"][i].asFloat(), 0, 15, 0, 1);
+        points.push_back(p);
+    }
+}
+
+//--------------------------------------------------------------
+void ofApp::loadFeatMatrix(){
+    cnpy::NpyArray t;
+    size_t dim, n;
+    double* data;
+    string filename = "/Users/naoto/Documents/bci_art/t0.npy";
+    t = cnpy::npy_load(filename);
+    ofxNumpy::getSize(t, dim, n);
+    data = t.data<double>();
+    for (int i = 0; i < n / dim; i++)
+    {
+        vector<float> feat_vector(dim);
+        for (int j = 0; j < dim; j++)
+        {
+            feat_vector.at(j) = *data;
+            data++;
+        }
+        feat_matrix.push_back(feat_vector);
+    }    
 }
 
 //--------------------------------------------------------------
