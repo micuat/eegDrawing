@@ -52,7 +52,6 @@ public:
     ofVec2f newPosPrev;
     int sampleIndex;
     
-    ofVboMesh strings;
     ofVboMesh stringsNew;
     bool drawGui;
     

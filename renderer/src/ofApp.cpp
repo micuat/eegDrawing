@@ -14,31 +14,7 @@ void ofApp::setup(){
     loadFeatMatrix();
     ofxNumpy::load("/Users/naoto/Documents/bci_art/tsneResult.npy", y);
 
-    strings.setMode(OF_PRIMITIVE_LINES);
     stringsNew.setMode(OF_PRIMITIVE_LINES);
-    for (int i = 0; i < y.size(); i++)
-    {
-        for (int j = i; j < y.size(); j++)
-        {
-            ofVec2f p0 = y.at(i);
-            ofVec2f p1 = y.at(j);
-            p0.x = ofMap(p0.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
-            p0.y = ofMap(p0.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
-            p1.x = ofMap(p1.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
-            p1.y = ofMap(p1.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
-            float dist = p0.distance(p1);
-            float distThreshold = 100;
-            if (dist < distThreshold)
-            {
-                strings.addVertex(p0);
-                strings.addVertex(p1);
-                strings.addColor(ofFloatColor::fromHsb((float)i / y.size() * 0.75f, 1, 1, ofMap(dist, distThreshold, 0, 0, 0.5f)));
-                strings.addColor(ofFloatColor::fromHsb((float)j / y.size() * 0.75f, 1, 1, ofMap(dist, distThreshold, 0, 0, 0.5f)));
-                strings.addIndex(strings.getNumVertices() - 2);
-                strings.addIndex(strings.getNumVertices() - 1);
-            }
-        }
-    }
     
     gui.setup();
     gui.add(sliderChannel.setup("Channel", 0, 0, 15));
@@ -128,18 +104,15 @@ void ofApp::update(){
             yNew.push_back(sample);
             
             ofVec2f p0 = sample;
-            p0.x = ofMap(p0.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
-            p0.y = ofMap(p0.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
             
             ofVec2f pn = kalman.getPrediction();
             pn.y = 1 - pn.y;
             for (int i = 0; i < yNew.size(); i++)
             {
                 ofVec2f p1 = yNew.at(i);
-                p1.x = ofMap(p1.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
-                p1.y = ofMap(p1.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
-                float dist = p0.distance(p1);
-                if (dist < distThreshold)
+                float dist = p0.distanceSquared(p1);
+                dist *= width * height; // correction to screen space
+                if (dist < distThreshold * distThreshold)
                 {
                     stringsNew.addVertex(p0);
                     stringsNew.addVertex(p1);
@@ -152,7 +125,7 @@ void ofApp::update(){
             
             if(showVideo) {
                 // find video frame
-                float closestDistance = 10000;
+                float closestDistance = 1000000;
                 int closestFrame = 0;
                 for (int i = ofRandom(0, 10); i < points.size(); i+=10) {
                     float distanceSquared = points.at(i).distanceSquared(pn);
@@ -206,9 +179,13 @@ void ofApp::draw(){
     ofSetLineWidth(2);
     
     ofPushMatrix();
-    ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
+    ofTranslate(ofGetWidth() * 0.5f - width * 0.5f, ofGetHeight() * 0.5f - height * 0.5f);
+    ofScale(width, height);
     stringsNew.draw();
+    ofPopMatrix();
     
+    ofPushMatrix();
+    ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
     for (int i = 0; i < y.size(); i++)
     {
         ofVec2f p = y.at(i);
@@ -220,8 +197,8 @@ void ofApp::draw(){
             ofSetColor(ofFloatColor::fromHsb((float)count / y.size() * 0.75f, 1, 1, 0.95f));
         
         ofVec2f newPos;
-        newPos.x = ofMap(p.x, 0, 1, -width * 0.5f + 10, width * 0.5f - 10);
-        newPos.y = ofMap(p.y, 0, 1, -height * 0.5f + 10, height * 0.5f - 10);
+        newPos.x = ofMap(p.x, 0, 1, -width * 0.5f, width * 0.5f);
+        newPos.y = ofMap(p.y, 0, 1, -height * 0.5f, height * 0.5f);
         
         ofCircle(newPos, radius);
         
