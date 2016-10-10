@@ -114,7 +114,7 @@ void ofApp::setup(){
     
     fbo.allocate(width * 2, height * 2, GL_RGB);
     
-    kalman.init(1e-4, 1e+1);
+    kalman.init(1e-4, 1e+3);
 }
 
 //--------------------------------------------------------------
@@ -164,7 +164,7 @@ void ofApp::update(){
                 // find video frame
                 float closestDistance = 10000;
                 int closestFrame = 0;
-                for (int i = 0; i < points.size(); i++) {
+                for (int i = ofRandom(0, 10); i < points.size(); i+=10) {
                     float distanceSquared = points.at(i).distanceSquared(pn);
                     if(distanceSquared < closestDistance) {
                         closestDistance = distanceSquared;
@@ -178,6 +178,8 @@ void ofApp::update(){
     videoPlayer.setFrame(curFrame);
     
     videoPlayer.update();
+    
+    ofSetWindowTitle(ofToString(ofGetFrameRate()));
 }
 
 //--------------------------------------------------------------
@@ -190,6 +192,16 @@ void ofApp::draw(){
         ofSetColor(255, 25);
     }
 
+    if(switchFlag >= 0) {
+        ofPushStyle();
+        ofSetColor(0, 255);
+        ofRect(0, 0, ofGetWidth(), ofGetHeight());
+        ofPopStyle();
+        switchFlag++;
+        if(switchFlag >= 2)
+            switchFlag = -1;
+    }
+    
     if(showVideo) {
         videoPlayer.draw(0, 0, ofGetWidth(), ofGetHeight());
     }
@@ -286,10 +298,12 @@ void ofApp::keyPressed(int key){
     if (key == '1')
     {
         showVideo = !showVideo;
+        switchFlag = 0;
     }
     if (key == '2')
     {
         showPoints = !showPoints;
+        switchFlag = 0;
     }
 }
 

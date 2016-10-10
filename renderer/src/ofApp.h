@@ -70,9 +70,10 @@ public:
     
     bool showVideo;
     bool showPoints;
+    int switchFlag;
     
     ofxCv::KalmanPosition kalman;
 
-    ofApp() : showVideo(true), showPoints(true), curFrame(0) {
+    ofApp() : showVideo(true), showPoints(true), switchFlag(-1), curFrame(0) {
     }
 };
