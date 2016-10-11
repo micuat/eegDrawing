@@ -18,6 +18,7 @@ void ofApp::setup(){
     
     gui.setup();
     gui.add(lineAlpha.setup("Line Alpha", 0.5f, 0, 1));
+    gui.add(stretchRate.setup("Stretch Rate (Mapping)", 1, 0, 2));
     gui.add(refreshSec.setup("Refresh Sec", 5, 1, 20));
     gui.add(distThreshold.setup("Distance", 150, 50, 300));
     gui.loadFromFile("settings.xml");
@@ -26,6 +27,8 @@ void ofApp::setup(){
     fbo.allocate(width * 2, height * 2, GL_RGB);
     
     kalman.init(1e-4, 1e+3);
+    
+    ofxNumpy::load("/Users/naoto/Documents/JR Sound Library/tsne.npy", soundTsne);
 }
 
 //--------------------------------------------------------------
@@ -127,6 +130,29 @@ void ofApp::update(){
                 }
                 curFrame = closestFrame / 2;
             }
+            
+            // sound
+            {
+                ofVec2f sampleShrunk;
+                sampleShrunk.x = ofMap(sample.x, 0, 1, (1 - stretchRate) * 0.5f, (1 + stretchRate) * 0.5f);
+                sampleShrunk.y = ofMap(sample.y, 0, 1, (1 - stretchRate) * 0.5f, (1 + stretchRate) * 0.5f);
+                float closestDistance = 100000000;
+                int closestIndex = 0;
+                for(int i = 0; i < soundTsne.size(); i++) {
+                    ofVec2f yi = soundTsne.at(i);
+                    float distance = yi.distanceSquared(sampleShrunk);
+                    if(distance < closestDistance) {
+                        closestIndex = i;
+                        closestDistance = distance;
+                    }
+                }
+                if(curSoundIndex != closestIndex) {
+                    sound.loadSound("/Users/naoto/Documents/JR Sound Library/" + files[closestIndex]);
+                    sound.play();
+                    ofLogError() << closestIndex << " " << files[closestIndex];
+                }
+                curSoundIndex = closestIndex;
+            }
         }
     }
     videoPlayer.setFrame(curFrame);
@@ -203,6 +229,33 @@ void ofApp::draw(){
         stringsNew.setMode(OF_PRIMITIVE_LINES);
     }
     
+    if(showSounds)
+    {
+        ofPushMatrix();
+        ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
+        
+        for (int i = 0; i < soundTsne.size(); i++)
+        {
+            ofVec3f p = soundTsne.at(i);
+            
+            float radius = 5;
+            ofSetColor(ofFloatColor::fromHsb(p.z, 1, 1, 0.95f));
+            
+            ofCircle(ofMap(p.x, 0, 1, -width*0.5f, width*0.5f),
+                     ofMap(p.y, 0, 1, -height*0.5f, height*0.5f), radius);
+            
+            if(i == curSoundIndex) {
+                ofPushStyle();
+                ofNoFill();
+                ofSetColor(255, 255);
+                ofCircle(ofMap(p.x, 0, 1, -width*0.5f, width*0.5f),
+                         ofMap(p.y, 0, 1, -height*0.5f, height*0.5f), radius + 2);
+                ofPopStyle();
+            }
+        }
+        ofPopMatrix();
+    }
+    
     if(drawGui)
         gui.draw();
 }
@@ -229,6 +282,11 @@ void ofApp::keyPressed(int key){
     if (key == '2')
     {
         showPoints = !showPoints;
+        switchFlag = 0;
+    }
+    if (key == '3')
+    {
+        showSounds = !showSounds;
         switchFlag = 0;
     }
 }
