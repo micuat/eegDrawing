@@ -62,6 +62,6 @@ public:
 
     ofxCv::KalmanPosition kalman;
 
-    ofApp() : showVideo(true), showPoints(true), switchFlag(-1), curFrame(0), sampleIndex(0), didSay(false), lastSay(-100) {
+    ofApp() : showVideo(true), showPoints(true), switchFlag(-1), curFrame(0), sampleIndex(0), didSay(false), lastSay(5) {
     }
 };

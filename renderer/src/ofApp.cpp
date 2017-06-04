@@ -2,6 +2,17 @@
 
 #include "ofxNumpy.h"
 
+class SayThread : public ofThread {
+public:
+    int x;
+    int y;
+    void threadedFunction() {
+        system((string("say ") + ofToString(x) + " " + ofToString(y)).c_str());
+        stopThread();
+    }
+};
+SayThread sayThread;
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     ofHideCursor();
@@ -101,8 +112,10 @@ void ofApp::update(){
 
             if(ofGetElapsedTimef() - lastSay > 3) {
                 int x = ofMap(pn.x, 0, 1, 0, 8);
-                int y = ofMap(pn.x, 0, 1, 0, 4);
-                system((string("say ") + ofToString(x) + " " + ofToString(y)).c_str());
+                int y = ofMap(pn.y, 1, 0, 0, 8);
+                sayThread.x = x;
+                sayThread.y = y;
+                sayThread.startThread(true);
                 lastSay = ofGetElapsedTimef();
             }
             for (int i = 0; i < yNew.size(); i++)
