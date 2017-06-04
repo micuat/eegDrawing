@@ -95,9 +95,16 @@ void ofApp::update(){
             yNew.push_back(sample);
             
             ofVec2f p0 = sample;
-            
+
             ofVec2f pn = kalman.getPrediction();
             pn.y = 1 - pn.y;
+
+            if(ofGetElapsedTimef() - lastSay > 3) {
+                int x = ofMap(pn.x, 0, 1, 0, 8);
+                int y = ofMap(pn.x, 0, 1, 0, 4);
+                system((string("say ") + ofToString(x) + " " + ofToString(y)).c_str());
+                lastSay = ofGetElapsedTimef();
+            }
             for (int i = 0; i < yNew.size(); i++)
             {
                 ofVec2f p1 = yNew.at(i);
