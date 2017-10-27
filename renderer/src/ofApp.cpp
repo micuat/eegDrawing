@@ -12,7 +12,7 @@ void ofApp::setup(){
     setupVideo();
     
     loadFeatMatrix();
-    ofxNumpy::load("/Users/naoto/Documents/bci_art/tsneResult.npy", y);
+    ofxNumpy::load("c:/Users/naoto/Documents/bci_art/tsneResult.npy", y);
 
     stringsNew.setMode(OF_PRIMITIVE_LINES);
     
@@ -28,12 +28,12 @@ void ofApp::setup(){
     
     kalman.init(1e-4, 1e+3);
     
-    ofxNumpy::load("/Users/naoto/Documents/JR Sound Library/tsne.npy", soundTsne);
+    ofxNumpy::load("c:/Users/naoto/Documents/JR Sound Library/tsne.npy", soundTsne);
 }
 
 //--------------------------------------------------------------
 void ofApp::setupVideo(){
-    videoPlayer.loadMovie(ofToDataPath("D05T01_Janine_sync_Center_Small.mp4"));
+    videoPlayer.loadMovie(ofToDataPath("c:/Users/naoto/Documents/2017CCL8/D05T01_Janine_sync_Center_Small.mov", true));
     videoPlayer.setLoopState(OF_LOOP_NORMAL);
     videoPlayer.play();
     
@@ -63,7 +63,7 @@ void ofApp::loadFeatMatrix(){
     cnpy::NpyArray t;
     size_t dim, n;
     double* data;
-    string filename = "/Users/naoto/Documents/bci_art/t0.npy";
+    string filename = "c:/Users/naoto/Documents/bci_art/t0.npy";
     t = cnpy::npy_load(filename);
     ofxNumpy::getSize(t, dim, n);
     data = t.data<double>();
@@ -140,6 +140,7 @@ void ofApp::update(){
                 int closestIndex = 0;
                 for(int i = 0; i < soundTsne.size(); i++) {
                     ofVec2f yi = soundTsne.at(i);
+					//yi = yi.getRotated(ofMap(mouseX, 0, ofGetWidth(), 0, 360), ofVec2f(0.5f, 0.5f));
                     float distance = yi.distanceSquared(sampleShrunk);
                     if(distance < closestDistance) {
                         closestIndex = i;
@@ -147,9 +148,9 @@ void ofApp::update(){
                     }
                 }
                 if(curSoundIndex != closestIndex) {
-                    sound.loadSound("/Users/naoto/Documents/JR Sound Library/" + files[closestIndex]);
-                    sound.play();
-                    ofLogError() << closestIndex << " " << files[closestIndex];
+                    //sound.loadSound(ofToDataPath("c:/Users/naoto/Documents/JR Sound Library/" + files[closestIndex], true));
+                    //sound.play();
+                    //ofLogError() << closestIndex << " " << files[closestIndex];
                 }
                 curSoundIndex = closestIndex;
             }
@@ -237,7 +238,10 @@ void ofApp::draw(){
         for (int i = 0; i < soundTsne.size(); i++)
         {
             ofVec3f p = soundTsne.at(i);
-            
+			//p -= ofVec3f(0.5f, 0.5f, 0);
+			//p = p.getRotated(ofMap(mouseX, 0, ofGetWidth(), 0, 360), ofVec3f(0, 0, 1));
+			//p += ofVec3f(0.5f, 0.5f, 0);
+
             float radius = 5;
             ofSetColor(ofFloatColor::fromHsb(p.z, 1, 1, 0.95f));
             
