@@ -9,10 +9,7 @@ void ofApp::setup(){
     
     receiver.setup(13000);
 
-    setupVideo();
-    
     loadFeatMatrix();
-    ofxNumpy::load("c:/Users/naoto/Documents/bci_art/tsneResult.npy", y);
 
     stringsNew.setMode(OF_PRIMITIVE_LINES);
     
@@ -29,35 +26,6 @@ void ofApp::setup(){
     kalman.init(1e-4, 1e+3);
     
 	serial.setup("COM5", 115200); // windows example
-
-    ofxNumpy::load("c:/Users/naoto/Documents/JR Sound Library/tsne.npy", soundTsne);
-}
-
-//--------------------------------------------------------------
-void ofApp::setupVideo(){
-    videoPlayer.loadMovie(ofToDataPath("c:/Users/naoto/Documents/2017CCL8/D05T01_Janine_sync_Center_Small.mov", true));
-    videoPlayer.setLoopState(OF_LOOP_NORMAL);
-    videoPlayer.play();
-    
-    // D05T01
-    std::string urlx = ofToDataPath("3eae1051-e185-4458-b04e-7bd510f6f076.json");
-    std::string urly = ofToDataPath("9cc12a02-f7c9-4fd3-a3aa-1cabd1a83ef9.json");
-    
-    if (!responsex.open(urlx))
-    {
-        ofLogNotice("ofApp::setup") << "Failed to parse JSON";
-    }
-    if (!responsey.open(urly))
-    {
-        ofLogNotice("ofApp::setup") << "Failed to parse JSON";
-    }
-    for (Json::ArrayIndex i = 0; i < responsex["frames"].size(); i++)
-    {
-        ofPoint p;
-        p.x = ofMap(responsex["frames"][i].asFloat(), 0, 15, 0, 1);
-        p.y = ofMap(responsey["frames"][i].asFloat(), 0, 15, 0, 1);
-        points.push_back(p);
-    }
 }
 
 //--------------------------------------------------------------
@@ -69,6 +37,7 @@ void ofApp::loadFeatMatrix(){
     t = cnpy::npy_load(filename);
     ofxNumpy::getSize(t, dim, n);
     data = t.data<double>();
+	feat_matrix.clear();
     for (int i = 0; i < n / dim; i++)
     {
         vector<float> feat_vector(dim);
@@ -78,7 +47,9 @@ void ofApp::loadFeatMatrix(){
             data++;
         }
         feat_matrix.push_back(feat_vector);
-    }    
+    }
+
+	ofxNumpy::load("c:/Users/naoto/Documents/bci_art/tsneResult.npy", y);
 }
 
 //--------------------------------------------------------------
@@ -125,78 +96,16 @@ void ofApp::update(){
                     stringsNew.addIndex(stringsNew.getNumVertices() - 1);
                 }
             }
-            
-            if(showVideo) {
-                // find video frame
-                float closestDistance = 1000000;
-                int closestFrame = 0;
-                for (int i = ofRandom(0, 10); i < points.size(); i+=10) {
-                    float distanceSquared = points.at(i).distanceSquared(pn);
-                    if(distanceSquared < closestDistance) {
-                        closestDistance = distanceSquared;
-                        closestFrame = i;
-                    }
-                }
-                curFrame = closestFrame / 2;
-            }
-            
-            // sound
-            {
-                ofVec2f sampleShrunk;
-                sampleShrunk.x = ofMap(sample.x, 0, 1, (1 - stretchRate) * 0.5f, (1 + stretchRate) * 0.5f);
-                sampleShrunk.y = ofMap(sample.y, 0, 1, (1 - stretchRate) * 0.5f, (1 + stretchRate) * 0.5f);
-                float closestDistance = 100000000;
-                int closestIndex = 0;
-                for(int i = 0; i < soundTsne.size(); i++) {
-                    ofVec2f yi = soundTsne.at(i);
-					//yi = yi.getRotated(ofMap(mouseX, 0, ofGetWidth(), 0, 360), ofVec2f(0.5f, 0.5f));
-                    float distance = yi.distanceSquared(sampleShrunk);
-                    if(distance < closestDistance) {
-                        closestIndex = i;
-                        closestDistance = distance;
-                    }
-                }
-                if(curSoundIndex != closestIndex) {
-                    //sound.loadSound(ofToDataPath("c:/Users/naoto/Documents/JR Sound Library/" + files[closestIndex], true));
-                    //sound.play();
-                    //ofLogError() << closestIndex << " " << files[closestIndex];
-                }
-                curSoundIndex = closestIndex;
-            }
         }
     }
-    videoPlayer.setFrame(curFrame);
-    
-    videoPlayer.update();
     
     ofSetWindowTitle(ofToString(ofGetFrameRate()));
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-    if(showPoints) {
-        ofBackground(0, 255);
-        ofSetColor(255, 255);
-    }
-    else {
-        ofSetColor(255, 25);
-    }
-
-    if(switchFlag >= 0) {
-        ofPushStyle();
-        ofSetColor(0, 255);
-        ofRect(0, 0, ofGetWidth(), ofGetHeight());
-        ofPopStyle();
-        switchFlag++;
-        if(switchFlag >= 2)
-            switchFlag = -1;
-    }
-    
-    if(showVideo) {
-        videoPlayer.draw(0, 0, ofGetWidth(), ofGetHeight());
-    }
-    
-    if(!showPoints) return;
+    ofBackground(0, 255);
+    ofSetColor(255, 255);
 
     int count = 0;
     ofVec2f pPrev;
@@ -239,36 +148,6 @@ void ofApp::draw(){
         stringsNew.setMode(OF_PRIMITIVE_LINES);
     }
     
-    if(showSounds)
-    {
-        ofPushMatrix();
-        ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
-        
-        for (int i = 0; i < soundTsne.size(); i++)
-        {
-            ofVec3f p = soundTsne.at(i);
-			//p -= ofVec3f(0.5f, 0.5f, 0);
-			//p = p.getRotated(ofMap(mouseX, 0, ofGetWidth(), 0, 360), ofVec3f(0, 0, 1));
-			//p += ofVec3f(0.5f, 0.5f, 0);
-
-            float radius = 5;
-            ofSetColor(ofFloatColor::fromHsb(p.z, 1, 1, 0.95f));
-            
-            ofCircle(ofMap(p.x, 0, 1, -width*0.5f, width*0.5f),
-                     ofMap(p.y, 0, 1, -height*0.5f, height*0.5f), radius);
-            
-            if(i == curSoundIndex) {
-                ofPushStyle();
-                ofNoFill();
-                ofSetColor(255, 255);
-                ofCircle(ofMap(p.x, 0, 1, -width*0.5f, width*0.5f),
-                         ofMap(p.y, 0, 1, -height*0.5f, height*0.5f), radius + 2);
-                ofPopStyle();
-            }
-        }
-        ofPopMatrix();
-    }
-    
     if(drawGui)
         gui.draw();
 }
@@ -286,21 +165,6 @@ void ofApp::keyPressed(int key){
     if (key == 'f')
     {
         ofToggleFullscreen();
-    }
-    if (key == '1')
-    {
-        showVideo = !showVideo;
-        switchFlag = 0;
-    }
-    if (key == '2')
-    {
-        showPoints = !showPoints;
-        switchFlag = 0;
-    }
-    if (key == '3')
-    {
-        showSounds = !showSounds;
-        switchFlag = 0;
     }
 }
 
