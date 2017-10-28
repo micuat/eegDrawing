@@ -97,6 +97,13 @@ void ofApp::update(){
                 }
             }
         }
+		else if (m.getAddress() == "/muse/tsne/done") {
+			// reload
+			loadFeatMatrix();
+			yNew.clear();
+			stringsNew.clear();
+			stringsNew.setMode(OF_PRIMITIVE_LINES);
+		}
     }
     
     ofSetWindowTitle(ofToString(ofGetFrameRate()));
