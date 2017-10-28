@@ -28,6 +28,8 @@ void ofApp::setup(){
     
     kalman.init(1e-4, 1e+3);
     
+	serial.setup("COM5", 115200); // windows example
+
     ofxNumpy::load("c:/Users/naoto/Documents/JR Sound Library/tsne.npy", soundTsne);
 }
 
@@ -100,7 +102,14 @@ void ofApp::update(){
             ofVec2f p0 = sample;
             
             ofVec2f pn = kalman.getPrediction();
-            pn.y = 1 - pn.y;
+
+			unsigned char *bytes = new unsigned char[3];
+			bytes[0] = (unsigned char)ofMap(pn.x, -width * 0.5f, width * 0.5f, 0, 255, true);
+			bytes[1] = ',';
+			bytes[2] = (unsigned char)ofMap(pn.y, height * 0.5f, -height * 0.5f, 80, 255, true);
+			serial.writeBytes(bytes, 3);
+
+			pn.y = 1 - pn.y;
             for (int i = 0; i < yNew.size(); i++)
             {
                 ofVec2f p1 = yNew.at(i);

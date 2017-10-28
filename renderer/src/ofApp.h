@@ -64,6 +64,7 @@ public:
     vector<ofVec3f> soundTsne;
     
     ofxCv::KalmanPosition kalman;
+	ofSerial serial;
 
     ofApp() :
     showVideo(false),
