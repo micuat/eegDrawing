@@ -148,8 +148,6 @@ void ofApp::draw(){
     
     if (yNew.size() >= refreshSec * 10)
     {
-        ofSaveScreen(ofGetTimestampString() + ".png");
-
         yNew.clear();
         stringsNew.clear();
         stringsNew.setMode(OF_PRIMITIVE_LINES);
