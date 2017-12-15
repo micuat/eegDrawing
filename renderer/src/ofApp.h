@@ -53,6 +53,8 @@ public:
     
     ofxJSONElement responsex, responsey, responsez;
     vector<ofPoint> points;
+	vector<float> pointIntensity;
+	ofVec2f p0;
 
 	ofxVoronoi voronoi;
 	vector<ofLight> lights;

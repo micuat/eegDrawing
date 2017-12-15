@@ -30,9 +30,9 @@ void ofApp::setup(){
     kalman.init(1e-3, 1e+4);
     
 	//serial.setup("COM13", 9600); // windows example
-	serial.setup("COM5", 115200); // windows example
+	serial.setup("COM18", 115200); // windows example
 
-	lights.resize(8);
+	lights.resize(1);
 }
 
 //--------------------------------------------------------------
@@ -57,7 +57,7 @@ void ofApp::loadFeatMatrix(){
     }
 
 	ofxNumpy::load("c:/Users/naoto/Documents/bci_art/tsneResult.npy", y);
-
+	
 	ofRectangle bounds = ofRectangle(10, 10, ofGetWidth() - 20, ofGetHeight() - 20);
 
 	int pointCount = y.size();
@@ -71,6 +71,7 @@ void ofApp::loadFeatMatrix(){
 	voronoi.setPoints(yPoints);
 
 	voronoi.generate();
+	pointIntensity.resize(voronoi.getCells().size(), 0);
 }
 
 //--------------------------------------------------------------
@@ -82,8 +83,8 @@ void ofApp::update(){
 	bytes[0] = (unsigned char)ofMap(pn.x, 1, 0, 0, 127, true);
 	bytes[1] = ',';
 	bytes[2] = (unsigned char)ofMap(pn.y, 1, 0, 0, 127, true);
-	//serial.writeBytes(bytes, 3);
-	//serial.flush();
+	serial.writeBytes(bytes, 3);
+	serial.flush();
 
 	// check for waiting messages
 	while(receiver.hasWaitingMessages()){
@@ -99,7 +100,7 @@ void ofApp::update(){
             
             yNew.push_back(sample);
             
-            ofVec2f p0 = sample;
+            p0 = sample;
             ofVec2f pn = kalman.getPrediction();
 
 			pn.y = 1 - pn.y;
@@ -186,24 +187,29 @@ void ofApp::draw(){
 	ofSetColor(220);
 	ofDrawRectangle(bounds);
 
-	ofEnableLighting();
-	if (ofGetFrameNum() % 15 == 0) {
-		lights.erase(lights.begin());
-		lights.push_back(ofLight());
-		lights.back().setSpotlight(lightCutoff);
-		lights.back().setPosition(mouseX, mouseY, 1000);
-		//light.lookAt(ofPoint(ofGetWidth()/2, ofGetHeight()/2, 0));
-		lights.back().lookAt(ofPoint(mouseX, mouseY, 0));
-		lights.back().setAmbientColor(ofFloatColor(lightAmbient));
-		lights.back().setDiffuseColor(ofFloatColor(lightDiffuse));
-		lights.back().setAttenuation(1, lightAttenuation);
-	}
-	for(auto& light: lights)
-		light.enable();
+	//ofEnableLighting();
+
+	lights.back().setSpotlight(lightCutoff);
+	lights.back().setPosition(mouseX, mouseY, 1000);
+	//light.lookAt(ofPoint(ofGetWidth()/2, ofGetHeight()/2, 0));
+	lights.back().lookAt(ofPoint(mouseX, mouseY, 0));
+	lights.back().setAmbientColor(ofFloatColor(lightAmbient));
+	lights.back().setDiffuseColor(ofFloatColor(lightDiffuse));
+	lights.back().setAttenuation(1, lightAttenuation);
+	//for(auto& light: lights)
+	//	light.enable();
 	//cam.begin();
 	ofSetupScreenOrtho(-1, -1, -1000, 1000);
 	vector <ofxVoronoiCell> cells = voronoi.getCells();
 	for (int i = 0; i<cells.size(); i++) {
+		ofPoint screenP0 = p0 * ofGetHeight();
+		screenP0.x += (ofGetWidth() - ofGetHeight())*0.5f;
+		float closeness = ofMap(screenP0.distance(cells[i].pt), 0, 200, 1, 0, true);
+		float rate = 0.02f;
+		if (closeness < pointIntensity.at(i)) rate = 0.005f; // fades slowly
+		pointIntensity.at(i) = pointIntensity.at(i) * (1 - rate) + closeness * rate;
+		if (pointIntensity.at(i) < 0.1f) pointIntensity.at(i) = 0.1f;
+
 		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., 255.));
 		ofFill();
 		ofMesh mesh;
@@ -220,16 +226,12 @@ void ofApp::draw(){
 			mesh.addVertex(cells[i].pts[(j+1)% cells[i].pts.size()] + ofPoint(0, 0, -100));
 		}
 		ofSetColor(255);
-		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., 255.));
+		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., pointIntensity.at(i) * 255.));
 		mesh.draw();
 
-		// Draw cell points
-		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., 255.));
-		ofFill();
-		//ofDrawCircle(cells[i].pt, 5);
 	}
 	//cam.end();
-	ofDisableLighting();
+	//ofDisableLighting();
 
     if(drawGui)
         gui.draw();
