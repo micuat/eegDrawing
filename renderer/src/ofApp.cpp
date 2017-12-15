@@ -30,7 +30,8 @@ void ofApp::setup(){
     kalman.init(1e-3, 1e+4);
     
 	//serial.setup("COM13", 9600); // windows example
-	serial.setup("COM18", 115200); // windows example
+    //serial.setup("COM18", 115200); // windows example
+    serial.setup("/dev/cu.usbmodemfd141", 115200); // windows example
 
 	lights.resize(1);
 }
@@ -40,7 +41,8 @@ void ofApp::loadFeatMatrix(){
     cnpy::NpyArray t;
     size_t dim, n;
     double* data;
-    string filename = "c:/Users/naoto/Documents/bci_art/t0.npy";
+    string filename = "/Users/naoto/Documents/bci_art/t0.npy";
+    //string filename = "c:/Users/naoto/Documents/bci_art/t0.npy";
     t = cnpy::npy_load(filename);
     ofxNumpy::getSize(t, dim, n);
     data = t.data<double>();
@@ -56,7 +58,8 @@ void ofApp::loadFeatMatrix(){
         feat_matrix.push_back(feat_vector);
     }
 
-	ofxNumpy::load("c:/Users/naoto/Documents/bci_art/tsneResult.npy", y);
+    ofxNumpy::load("/Users/naoto/Documents/bci_art/tsneResult.npy", y);
+    //ofxNumpy::load("c:/Users/naoto/Documents/bci_art/tsneResult.npy", y);
 	
 	ofRectangle bounds = ofRectangle(10, 10, ofGetWidth() - 20, ofGetHeight() - 20);
 
