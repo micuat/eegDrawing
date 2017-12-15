@@ -23,8 +23,9 @@ void ofApp::setup(){
     
     fbo.allocate(width * 2, height * 2, GL_RGB);
     
-    kalman.init(1e-4, 1e+3);
+    kalman.init(1e-3, 1e+4);
     
+	//serial.setup("COM13", 9600); // windows example
 	serial.setup("COM5", 115200); // windows example
 }
 
@@ -54,8 +55,16 @@ void ofApp::loadFeatMatrix(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
-    kalman.update(sample);
     
+	kalman.update(sample);
+	ofVec2f pn = kalman.getPrediction();
+	unsigned char *bytes = new unsigned char[3];
+	bytes[0] = (unsigned char)ofMap(pn.x, 1, 0, 0, 127, true);
+	bytes[1] = ',';
+	bytes[2] = (unsigned char)ofMap(pn.y, 1, 0, 0, 127, true);
+	serial.writeBytes(bytes, 3);
+	serial.flush();
+
 	// check for waiting messages
 	while(receiver.hasWaitingMessages()){
 		// get the next message
@@ -71,17 +80,42 @@ void ofApp::update(){
             yNew.push_back(sample);
             
             ofVec2f p0 = sample;
-            
+
             ofVec2f pn = kalman.getPrediction();
 
 			unsigned char *bytes = new unsigned char[3];
-			bytes[0] = (unsigned char)ofMap(pn.x, -width * 0.5f, width * 0.5f, 0, 255, true);
+			bytes[0] = (unsigned char)ofMap(pn.x, 0, 1, 0, 127, true);
 			bytes[1] = ',';
-			bytes[2] = (unsigned char)ofMap(pn.y, height * 0.5f, -height * 0.5f, 80, 255, true);
-			serial.writeBytes(bytes, 3);
+			bytes[2] = (unsigned char)ofMap(pn.y, 1, 0, 0, 127, true);
+			//serial.writeBytes(bytes, 3);
+
+			string str = "";
+			str += ofToString((int)ofMap(pn.x, 0, 1, -200, 200, true));
+			str += ",";
+			str += ofToString((int)ofMap(pn.y, 1, 0, 50, 150, true));
+			str += ",";
+			str += ofToString(255);
+			str += ",";
+			str += ofToString(255);
+			str += ",";
+			str += ofToString(255);
+			ofLogError() << str;
+
+			//for(int i = 0; i < str.length(); i++)
+			//	serial.writeByte(str[i]);
+
+			if (serialCount > 10) {
+				//serial.writeBytes((unsigned char*)str.c_str(), str.length());
+				//serial.writeBytes(bytes, 3);
+				//serial.flush();
+			}
+			serialCount++;
 
 			pn.y = 1 - pn.y;
-            for (int i = 0; i < yNew.size(); i++)
+
+			pn.x += ofRandom(-0.1, 0.1);
+			pn.y += ofRandom(-0.1, 0.1);
+			for (int i = 0; i < yNew.size(); i++)
             {
                 ofVec2f p1 = yNew.at(i);
                 float dist = p0.distanceSquared(p1);
@@ -107,6 +141,8 @@ void ofApp::update(){
     }
     
     ofSetWindowTitle(ofToString(ofGetFrameRate()));
+	//ofSetWindowPosition(2736 * 1.75f, 0);
+	//ofSetWindowPosition(-10, -20);
 }
 
 //--------------------------------------------------------------
@@ -119,21 +155,21 @@ void ofApp::draw(){
     
     ofFloatColor c;
     
-    ofSetLineWidth(2);
+    ofSetLineWidth(2.5f);
     
     ofPushMatrix();
-    ofTranslate(ofGetWidth() * 0.5f - width * 0.5f, ofGetHeight() * 0.5f - height * 0.5f);
-    ofScale(width, height);
+	ofTranslate(ofGetWidth() * 0.5f / 1.25f - width * 0.5f, ofGetHeight() * 0.5f / 1.25f - height * 0.5f);
+	ofScale(width, height);
     stringsNew.draw();
     ofPopMatrix();
     
     ofPushMatrix();
-    ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
+    ofTranslate(ofGetWidth() * 0.5f / 1.25f, ofGetHeight() * 0.5f / 1.25f);
     for (int i = 0; i < y.size(); i++)
     {
         ofVec2f p = y.at(i);
         
-        float radius = 5;
+		float radius = 7.5;//5;
         ofSetColor(ofFloatColor::fromHsb((float)count / y.size() * 0.75f, 1, 1, 0.95f));
         
         ofVec2f newPos;
@@ -141,6 +177,7 @@ void ofApp::draw(){
         newPos.y = ofMap(p.y, 0, 1, -height * 0.5f, height * 0.5f);
         
         ofCircle(newPos, radius);
+		//ofDrawEllipse(newPos, radius, radius * 4.0f / 3.0f);
         
         count++;
     }

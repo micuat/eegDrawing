@@ -6,8 +6,8 @@
 #include "ofxJSON.h"
 #include "ofxCv.h"
 
-const int width = 640;
-const int height = 640;
+const int width = 800;// 640;
+const int height = 800;// 640;
 
 class ofApp : public ofBaseApp{
     
@@ -54,9 +54,12 @@ public:
 
     ofxCv::KalmanPosition kalman;
 	ofSerial serial;
+	int serialCount;
 
     ofApp() :
     curFrame(0),
-    sampleIndex(0) {
+		serialCount(0),
+    sampleIndex(0),
+	sample(0.5f, 0) {
     }
 };
