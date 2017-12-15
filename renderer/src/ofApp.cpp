@@ -10,10 +10,9 @@ void ofApp::setup(){
     receiver.setup(13000);
 
     loadFeatMatrix();
-
-    stringsNew.setMode(OF_PRIMITIVE_LINES);
     
     gui.setup();
+    gui.add(doVideo.setup("Show video", false));
     gui.add(lineAlpha.setup("Line Alpha", 0.5f, 0, 1));
     gui.add(stretchRate.setup("Stretch Rate (Mapping)", 1, 0, 2));
 	gui.add(lightAmbient.setup("Ambient", 0.01, 0, 1));
@@ -111,31 +110,11 @@ void ofApp::update(){
             ofVec2f pn = kalman.getPrediction();
 
 			pn.y = 1 - pn.y;
-
-			pn.x += ofRandom(-0.1, 0.1);
-			pn.y += ofRandom(-0.1, 0.1);
-			for (int i = 0; i < yNew.size(); i++)
-            {
-                ofVec2f p1 = yNew.at(i);
-                float dist = p0.distanceSquared(p1);
-                dist *= width * height; // correction to screen space
-                if (dist < distThreshold * distThreshold)
-                {
-                    stringsNew.addVertex(p0);
-                    stringsNew.addVertex(p1);
-                    stringsNew.addColor(ofFloatColor::fromHsb((float)sampleIndex / y.size() * 0.75f, 0.5f, 1, lineAlpha));
-                    stringsNew.addColor(ofFloatColor::fromHsb((float)sampleIndex / y.size() * 0.75f, 0.5f, 1, lineAlpha));
-                    stringsNew.addIndex(stringsNew.getNumVertices() - 2);
-                    stringsNew.addIndex(stringsNew.getNumVertices() - 1);
-                }
-            }
         }
 		else if (m.getAddress() == "/muse/tsne/done") {
 			// reload
 			loadFeatMatrix();
 			yNew.clear();
-			stringsNew.clear();
-			stringsNew.setMode(OF_PRIMITIVE_LINES);
 		}
         else if (m.getAddress() == "/muse/tsne/record") {
             int imageIndex = m.getArgAsInt32(0);
@@ -153,71 +132,46 @@ void ofApp::update(){
 void ofApp::draw(){
     ofBackground(0, 255);
     ofSetColor(255, 255);
-
-    int count = 0;
-    ofVec2f pPrev;
     
-    ofFloatColor c;
-    
-    ofSetLineWidth(2.5f);
-    
-    ofPushMatrix();
-	ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
-	ofScale(width, height);
-    stringsNew.draw();
-    ofPopMatrix();
-    
-    ofPushMatrix();
-    ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
-    for (int i = 0; i < y.size(); i++)
-    {
-        ofVec2f p = y.at(i);
+    if(doVideo) {
+        int ind = (ofGetFrameNum() / 8) % grabbedImages.size();
+        grabbedImages.at(ind).draw(0, 0, ofGetWidth(), ofGetHeight());
         
-		float radius = 7.5;//5;
-        ofSetColor(ofFloatColor::fromHsb((float)count / y.size() * 0.75f, 1, 1, 0.95f));
-        
-        ofVec2f newPos;
-        newPos.x = ofMap(p.x, 0, 1, -width * 0.5f, width * 0.5f);
-        newPos.y = ofMap(p.y, 0, 1, -height * 0.5f, height * 0.5f);
-        
-        ofDrawCircle(newPos, radius);
-        
-        count++;
+        for(int i = ind; i < ind + 30 && i < grabbedImages.size(); i++) {
+            auto p = y.at(i);
+            auto screenP = ofPoint(p.x * ofGetHeight() + (ofGetWidth()-ofGetHeight())*0.5f, p.y * ofGetHeight(), 0);
+            ofSetColor(ofColor::fromHsb(255. * i / grabbedImages.size(), 255., 255., 255));
+            ofDrawCircle(screenP, 20);
+        }
     }
-    ofPopMatrix();
-    
-    if (yNew.size() >= refreshSec * 10)
-    {
-        yNew.clear();
-        stringsNew.clear();
-        stringsNew.setMode(OF_PRIMITIVE_LINES);
+
+    vector <ofxVoronoiCell> cells = voronoi.getCells();
+    for (int i = 0; i<cells.size(); i++) {
+        ofPoint screenP0 = p0 * ofGetHeight();
+        screenP0.x += (ofGetWidth() - ofGetHeight())*0.5f;
+        float closeness = ofMap(screenP0.distance(cells[i].pt), 0, 200, 1, 0, true);
+        float rate = 0.02f;
+        if (closeness < pointIntensity.at(i)) rate = 0.005f; // fades slowly
+        pointIntensity.at(i) = pointIntensity.at(i) * (1 - rate) + closeness * rate;
+        if (pointIntensity.at(i) < 0.1f) pointIntensity.at(i) = 0.1f;
+
+        ofFill();
+        ofMesh mesh;
+        for (int j = 0; j < cells[i].pts.size(); j++) {
+            mesh.addVertex(cells[i].pt);
+            mesh.addVertex(cells[i].pts[j]);
+            mesh.addVertex(cells[i].pts[(j+1)% cells[i].pts.size()]);
+        }
+        ofSetColor(255);
+        int intensity = pointIntensity.at(i) * 255;
+        int alpha = 255;
+        if(doVideo) {
+            intensity = 255;
+            alpha = lineAlpha * 255;
+        }
+        ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., intensity, alpha));
+        mesh.draw();
     }
-	ofBackground(255);
-    grabbedImages.at(sampleIndex).draw(0, 0, ofGetWidth(), ofGetHeight());
-
-	ofSetupScreenOrtho(-1, -1, -1000, 1000);
-	vector <ofxVoronoiCell> cells = voronoi.getCells();
-	for (int i = 0; i<cells.size(); i++) {
-		ofPoint screenP0 = p0 * ofGetHeight();
-		screenP0.x += (ofGetWidth() - ofGetHeight())*0.5f;
-		float closeness = ofMap(screenP0.distance(cells[i].pt), 0, 200, 1, 0, true);
-		float rate = 0.02f;
-		if (closeness < pointIntensity.at(i)) rate = 0.005f; // fades slowly
-		pointIntensity.at(i) = pointIntensity.at(i) * (1 - rate) + closeness * rate;
-		if (pointIntensity.at(i) < 0.1f) pointIntensity.at(i) = 0.1f;
-
-		ofFill();
-		ofMesh mesh;
-		for (int j = 0; j < cells[i].pts.size(); j++) {
-			mesh.addVertex(cells[i].pt);
-			mesh.addVertex(cells[i].pts[j] + ofPoint(0, 0, -100));
-			mesh.addVertex(cells[i].pts[(j+1)% cells[i].pts.size()] + ofPoint(0, 0, -100));
-		}
-		ofSetColor(255);
-		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., pointIntensity.at(i) * 255., 100));
-		mesh.draw();
-
-	}
 
     if(drawGui)
         gui.draw();

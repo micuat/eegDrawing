@@ -33,6 +33,7 @@ public:
     vector<vector<float> > feat_matrix;
 
     ofxPanel gui;
+    ofxToggle doVideo;
     ofxFloatSlider lineAlpha;
 	ofxFloatSlider stretchRate;
 	ofxFloatSlider lightAmbient, lightDiffuse, lightAttenuation, lightCutoff;
@@ -45,7 +46,6 @@ public:
     ofVec2f sample;
     int sampleIndex;
     
-    ofVboMesh stringsNew;
     bool drawGui;
     
     ofFbo fbo;
