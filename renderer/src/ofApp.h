@@ -5,6 +5,7 @@
 #include "ofxOsc.h"
 #include "ofxJSON.h"
 #include "ofxCv.h"
+#include "ofxVoronoi.h"
 
 const int width = 800;// 640;
 const int height = 800;// 640;
@@ -33,8 +34,9 @@ public:
 
     ofxPanel gui;
     ofxFloatSlider lineAlpha;
-    ofxFloatSlider stretchRate;
-    ofxIntSlider refreshSec;
+	ofxFloatSlider stretchRate;
+	ofxFloatSlider lightAmbient, lightDiffuse, lightAttenuation, lightCutoff;
+	ofxIntSlider refreshSec;
     ofxIntSlider distThreshold;
     
     ofVec2f sample;
@@ -51,6 +53,10 @@ public:
     
     ofxJSONElement responsex, responsey, responsez;
     vector<ofPoint> points;
+
+	ofxVoronoi voronoi;
+	vector<ofLight> lights;
+	ofEasyCam cam;
 
     ofxCv::KalmanPosition kalman;
 	ofSerial serial;

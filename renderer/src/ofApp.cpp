@@ -16,7 +16,11 @@ void ofApp::setup(){
     gui.setup();
     gui.add(lineAlpha.setup("Line Alpha", 0.5f, 0, 1));
     gui.add(stretchRate.setup("Stretch Rate (Mapping)", 1, 0, 2));
-    gui.add(refreshSec.setup("Refresh Sec", 5, 1, 20));
+	gui.add(lightAmbient.setup("Ambient", 0.01, 0, 1));
+	gui.add(lightDiffuse.setup("Diffuse", 1, 0, 1));
+	gui.add(lightAttenuation.setup("Attenuation", 0.001, 0, 0.01));
+	gui.add(lightCutoff.setup("Cutoff", 30, 0, 45));
+	gui.add(refreshSec.setup("Refresh Sec", 5, 1, 20));
     gui.add(distThreshold.setup("Distance", 150, 50, 300));
     gui.loadFromFile("settings.xml");
     drawGui = false;
@@ -27,6 +31,8 @@ void ofApp::setup(){
     
 	//serial.setup("COM13", 9600); // windows example
 	serial.setup("COM5", 115200); // windows example
+
+	lights.resize(8);
 }
 
 //--------------------------------------------------------------
@@ -51,6 +57,20 @@ void ofApp::loadFeatMatrix(){
     }
 
 	ofxNumpy::load("c:/Users/naoto/Documents/bci_art/tsneResult.npy", y);
+
+	ofRectangle bounds = ofRectangle(10, 10, ofGetWidth() - 20, ofGetHeight() - 20);
+
+	int pointCount = y.size();
+	int seed = 33;
+	vector<ofPoint> yPoints;
+	for (auto p : y) {
+		yPoints.push_back(ofPoint(p.x * ofGetHeight() + (ofGetWidth()-ofGetHeight())*0.5f, p.y * ofGetHeight(), 0));
+	}
+
+	voronoi.setBounds(bounds);
+	voronoi.setPoints(yPoints);
+
+	voronoi.generate();
 }
 
 //--------------------------------------------------------------
@@ -62,8 +82,8 @@ void ofApp::update(){
 	bytes[0] = (unsigned char)ofMap(pn.x, 1, 0, 0, 127, true);
 	bytes[1] = ',';
 	bytes[2] = (unsigned char)ofMap(pn.y, 1, 0, 0, 127, true);
-	serial.writeBytes(bytes, 3);
-	serial.flush();
+	//serial.writeBytes(bytes, 3);
+	//serial.flush();
 
 	// check for waiting messages
 	while(receiver.hasWaitingMessages()){
@@ -80,36 +100,7 @@ void ofApp::update(){
             yNew.push_back(sample);
             
             ofVec2f p0 = sample;
-
             ofVec2f pn = kalman.getPrediction();
-
-			unsigned char *bytes = new unsigned char[3];
-			bytes[0] = (unsigned char)ofMap(pn.x, 0, 1, 0, 127, true);
-			bytes[1] = ',';
-			bytes[2] = (unsigned char)ofMap(pn.y, 1, 0, 0, 127, true);
-			//serial.writeBytes(bytes, 3);
-
-			string str = "";
-			str += ofToString((int)ofMap(pn.x, 0, 1, -200, 200, true));
-			str += ",";
-			str += ofToString((int)ofMap(pn.y, 1, 0, 50, 150, true));
-			str += ",";
-			str += ofToString(255);
-			str += ",";
-			str += ofToString(255);
-			str += ",";
-			str += ofToString(255);
-			ofLogError() << str;
-
-			//for(int i = 0; i < str.length(); i++)
-			//	serial.writeByte(str[i]);
-
-			if (serialCount > 10) {
-				//serial.writeBytes((unsigned char*)str.c_str(), str.length());
-				//serial.writeBytes(bytes, 3);
-				//serial.flush();
-			}
-			serialCount++;
 
 			pn.y = 1 - pn.y;
 
@@ -158,13 +149,13 @@ void ofApp::draw(){
     ofSetLineWidth(2.5f);
     
     ofPushMatrix();
-	ofTranslate(ofGetWidth() * 0.5f / 1.25f - width * 0.5f, ofGetHeight() * 0.5f / 1.25f - height * 0.5f);
+	ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
 	ofScale(width, height);
     stringsNew.draw();
     ofPopMatrix();
     
     ofPushMatrix();
-    ofTranslate(ofGetWidth() * 0.5f / 1.25f, ofGetHeight() * 0.5f / 1.25f);
+    ofTranslate(ofGetWidth() * 0.5f, ofGetHeight() * 0.5f);
     for (int i = 0; i < y.size(); i++)
     {
         ofVec2f p = y.at(i);
@@ -176,8 +167,7 @@ void ofApp::draw(){
         newPos.x = ofMap(p.x, 0, 1, -width * 0.5f, width * 0.5f);
         newPos.y = ofMap(p.y, 0, 1, -height * 0.5f, height * 0.5f);
         
-        ofCircle(newPos, radius);
-		//ofDrawEllipse(newPos, radius, radius * 4.0f / 3.0f);
+        ofDrawCircle(newPos, radius);
         
         count++;
     }
@@ -189,7 +179,58 @@ void ofApp::draw(){
         stringsNew.clear();
         stringsNew.setMode(OF_PRIMITIVE_LINES);
     }
-    
+	ofBackground(255);
+	ofRectangle bounds = voronoi.getBounds();
+	ofSetLineWidth(0);
+	ofNoFill();
+	ofSetColor(220);
+	ofDrawRectangle(bounds);
+
+	ofEnableLighting();
+	if (ofGetFrameNum() % 15 == 0) {
+		lights.erase(lights.begin());
+		lights.push_back(ofLight());
+		lights.back().setSpotlight(lightCutoff);
+		lights.back().setPosition(mouseX, mouseY, 1000);
+		//light.lookAt(ofPoint(ofGetWidth()/2, ofGetHeight()/2, 0));
+		lights.back().lookAt(ofPoint(mouseX, mouseY, 0));
+		lights.back().setAmbientColor(ofFloatColor(lightAmbient));
+		lights.back().setDiffuseColor(ofFloatColor(lightDiffuse));
+		lights.back().setAttenuation(1, lightAttenuation);
+	}
+	for(auto& light: lights)
+		light.enable();
+	//cam.begin();
+	ofSetupScreenOrtho(-1, -1, -1000, 1000);
+	vector <ofxVoronoiCell> cells = voronoi.getCells();
+	for (int i = 0; i<cells.size(); i++) {
+		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., 255.));
+		ofFill();
+		ofMesh mesh;
+		mesh.setMode(OF_PRIMITIVE_TRIANGLES);
+		//mesh.addVertex(cells[i].pt);
+		mesh.addVertices(cells[i].pts);
+		//mesh.addVertex(cells[i].pts.back());
+		//mesh.draw();
+
+		mesh.clear();
+		for (int j = 0; j < cells[i].pts.size(); j++) {
+			mesh.addVertex(cells[i].pt);
+			mesh.addVertex(cells[i].pts[j] + ofPoint(0, 0, -100));
+			mesh.addVertex(cells[i].pts[(j+1)% cells[i].pts.size()] + ofPoint(0, 0, -100));
+		}
+		ofSetColor(255);
+		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., 255.));
+		mesh.draw();
+
+		// Draw cell points
+		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., 255.));
+		ofFill();
+		//ofDrawCircle(cells[i].pt, 5);
+	}
+	//cam.end();
+	ofDisableLighting();
+
     if(drawGui)
         gui.draw();
 }
