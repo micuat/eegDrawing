@@ -39,6 +39,9 @@ public:
 	ofxIntSlider refreshSec;
     ofxIntSlider distThreshold;
     
+    ofVideoGrabber grabber;
+    vector<ofImage> grabbedImages;
+    
     ofVec2f sample;
     int sampleIndex;
     

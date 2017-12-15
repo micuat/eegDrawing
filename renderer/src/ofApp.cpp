@@ -34,6 +34,9 @@ void ofApp::setup(){
     serial.setup("/dev/cu.usbmodemfd141", 115200); // windows example
 
 	lights.resize(1);
+    
+    grabber.setup(1280, 720);
+    grabbedImages.resize(1);
 }
 
 //--------------------------------------------------------------
@@ -79,6 +82,7 @@ void ofApp::loadFeatMatrix(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    grabber.update();
     
 	kalman.update(sample);
 	ofVec2f pn = kalman.getPrediction();
@@ -133,6 +137,11 @@ void ofApp::update(){
 			stringsNew.clear();
 			stringsNew.setMode(OF_PRIMITIVE_LINES);
 		}
+        else if (m.getAddress() == "/muse/tsne/record") {
+            int imageIndex = m.getArgAsInt32(0);
+            if(imageIndex >= grabbedImages.size()) grabbedImages.resize(imageIndex + 1);
+            grabbedImages.at(imageIndex).setFromPixels(grabber.getPixels());
+        }
     }
     
     ofSetWindowTitle(ofToString(ofGetFrameRate()));
@@ -184,24 +193,8 @@ void ofApp::draw(){
         stringsNew.setMode(OF_PRIMITIVE_LINES);
     }
 	ofBackground(255);
-	ofRectangle bounds = voronoi.getBounds();
-	ofSetLineWidth(0);
-	ofNoFill();
-	ofSetColor(220);
-	ofDrawRectangle(bounds);
+    grabbedImages.at(sampleIndex).draw(0, 0, ofGetWidth(), ofGetHeight());
 
-	//ofEnableLighting();
-
-	lights.back().setSpotlight(lightCutoff);
-	lights.back().setPosition(mouseX, mouseY, 1000);
-	//light.lookAt(ofPoint(ofGetWidth()/2, ofGetHeight()/2, 0));
-	lights.back().lookAt(ofPoint(mouseX, mouseY, 0));
-	lights.back().setAmbientColor(ofFloatColor(lightAmbient));
-	lights.back().setDiffuseColor(ofFloatColor(lightDiffuse));
-	lights.back().setAttenuation(1, lightAttenuation);
-	//for(auto& light: lights)
-	//	light.enable();
-	//cam.begin();
 	ofSetupScreenOrtho(-1, -1, -1000, 1000);
 	vector <ofxVoronoiCell> cells = voronoi.getCells();
 	for (int i = 0; i<cells.size(); i++) {
@@ -213,28 +206,18 @@ void ofApp::draw(){
 		pointIntensity.at(i) = pointIntensity.at(i) * (1 - rate) + closeness * rate;
 		if (pointIntensity.at(i) < 0.1f) pointIntensity.at(i) = 0.1f;
 
-		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., 255.));
 		ofFill();
 		ofMesh mesh;
-		mesh.setMode(OF_PRIMITIVE_TRIANGLES);
-		//mesh.addVertex(cells[i].pt);
-		mesh.addVertices(cells[i].pts);
-		//mesh.addVertex(cells[i].pts.back());
-		//mesh.draw();
-
-		mesh.clear();
 		for (int j = 0; j < cells[i].pts.size(); j++) {
 			mesh.addVertex(cells[i].pt);
 			mesh.addVertex(cells[i].pts[j] + ofPoint(0, 0, -100));
 			mesh.addVertex(cells[i].pts[(j+1)% cells[i].pts.size()] + ofPoint(0, 0, -100));
 		}
 		ofSetColor(255);
-		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., pointIntensity.at(i) * 255.));
+		ofSetColor(ofColor::fromHsb(255. * i / cells.size(), 255., pointIntensity.at(i) * 255., 100));
 		mesh.draw();
 
 	}
-	//cam.end();
-	//ofDisableLighting();
 
     if(drawGui)
         gui.draw();
